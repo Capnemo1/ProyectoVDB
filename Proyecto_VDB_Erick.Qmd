@@ -1,0 +1,199 @@
+---
+title: "Proyecto Final VDB"
+author: "Erick y Adriana"
+date: "2024-12-05"
+format:
+  revealjs:
+    slide-number: true
+    theme: simple
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+<style>
+/* Tamaño global de fuente para todo el texto */
+section {
+    font-size: 14px; /* Ajusta este valor según tus necesidades */
+    text-align: justify; /* Para justificar el texto */
+}
+
+/* Tamaños específicos para encabezados */
+h1 {
+    font-size: 22px;
+}
+
+h2 {
+    font-size: 18px;
+}
+
+h3 {
+    font-size: 16px;
+}
+
+/* Personalización de párrafos */
+p {
+    margin-bottom: 1em; /* Espaciado entre párrafos */
+    line-height: 1.5; /* Altura de línea para mejorar la legibilidad */
+}
+</style>
+# Introducción
+En este proyecto, aplico conceptos aprendidos en los "Viernes de Bioinformática" para explorar y analizar el dataset starwars, disponible en el paquete dplyr de R. Siguiendo buenas prácticas en el manejo de datos, utilizo funciones y programación defensiva para garantizar la reproducibilidad y la precisión del análisis. los objetivos incluyen responder tres preguntas clave
+
+**1.¿Cuál es la distribución de alturas por especie?**
+
+**2.¿Cuál es la relación entre masa y altura (gráfico)?**
+
+**3.¿Cuál es el porcentaje de colores de ojos por género?**
+
+## Metodología
+ **Cargar las librerias necesarias**
+```{r setup2, include=TRUE, message=FALSE, warning=FALSE}
+# Cargar librerías necesarias
+library(dplyr) #aqui esta el data set Starwars
+library(ggplot2)
+library(assertthat)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Se genera una condición para asegurar que el dataset `starwars` esté disponible.Posteriormente se realiza un head para visulizar el contienido de las primeras filas.
+
+```{r setup, include=TRUE, message=FALSE, warning=FALSE}
+# Cargar el dataset `starwars`
+data(starwars, package = "dplyr")
+
+# Verificar si el dataset `starwars` está disponible
+if (!exists("starwars")) {
+  stop("El dataset `starwars` no está disponible. Asegúrate de cargar el paquete `dplyr` con `library(dplyr)`.")
+}
+
+# Visualizar las primeras filas del dataset
+head(starwars)
+
+##exists("starwars"): Comprueba si el objeto llamado starwars está disponible.
+##if (!exists(...)): Si el dataset no existe, se activa la condición dentro del bloque if.
+##stop(...): Lanza un error con un mensaje personalizado, indicando que el dataset no está disponible y sugiriendo cargar el paquete dplyr con library(dplyr).
+
+# Visualizar las primeras filas
+head(starwars)
+```
+
+**Detalles del dataset**
+
+El dataset contiene información detallada de los personajes de Star Wars, incluyendo características físicas (altura, masa, colores), género/sexo, origen, y participación en películas, vehículos, y naves. Este es un dataset bien estructurado para análisis descriptivos y visualizaciones.
+
+Nos dimos cuenta de que muchos personajes no contaban con información completa, y estos valores aparecían como NA. Por lo tanto, el segundo paso en nuestro análisis fue filtrar el dataset para eliminar aquellos registros con valores faltantes en las columnas clave. Esto se realizó con la siguiente función:
+
+```{r setup3, include=TRUE, message=FALSE, warning=FALSE}
+# Filtrar y verificar datos
+starwars_clean <- starwars %>%
+  filter(!is.na(height), !is.na(mass), !is.na(species), !is.na(gender), !is.na(eye_color))
+##filter(): Selecciona filas del dataset que cumplen ciertas condiciones.
+##!is.na(column): Verifica que una columna no tenga valores faltantes (NA).
+```
+## Análisis
+**Creacion de funciones para responder las preguntas**
+
+ **1.¿Cuál es la distribución de alturas por especie?**
+
+```{r functions, include=TRUE, message=FALSE, warning=FALSE}
+# Definir la función para calcular la altura promedio por especie
+calculate_avg_height <- function(data) {
+  if (!"species" %in% colnames(data) || !"height" %in% colnames(data)) {
+    stop("El dataset no contiene las columnas necesarias: `species` y `height`.")
+  }
+  data %>%
+    group_by(species) %>%
+    summarise(avg_height = mean(height, na.rm = TRUE), .groups = "drop")
+}
+#####!"species" %in% colnames(data): Verifica si la columna species no está presente en el dataset.
+###||: Operador "o". Comprueba si alguna de las condiciones (falta de species o height) es verdadera.
+##stop(): Si falta alguna de las columnas, detiene la ejecución y muestra un mensaje de error.
+```
+**Generar gráfico de alturas por especie**
+
+```{r height_distribution, include=TRUE, message=FALSE, warning=FALSE, results='asis'}
+avg_height_species <- calculate_avg_height(starwars_clean)
+print(
+  ggplot(avg_height_species, aes(x = reorder(species, avg_height), y = avg_height)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() +
+    labs(title = "Altura Promedio por Especie",
+         x = "Especie", y = "Altura Promedio (cm)") +
+    theme_minimal()
+)
+```
+
+**La altura de los personajes de Star Wars varía significativamente según su especie. La especie más pequeña corresponde a la del maestro Yoda, quien entrenó a aprendices destacados como el Conde Dooku, quien eventualmente se unió al lado oscuro, y Luke Skywalker. Por otro lado, las especies más altas incluyen a los Wookiees, Kaminoans, Kaleesh y Gungans, todas superando los 200 cm (2 metros) de altura.**
+
+## **2. ¿Existe una relación entre masa y altura?**
+** Definir la función para graficar la relación entre masa y altura**
+```{r plot, include=TRUE, message=FALSE, warning=FALSE}
+plot_mass_height_relationship <- function(data) {
+  if (!"height" %in% colnames(data) || !"mass" %in% colnames(data)) {
+    stop("El dataset no contiene las columnas necesarias: `height` y `mass`.")
+  }
+  ggplot(data, aes(x = height, y = mass)) +
+    geom_point(color = "blue", alpha = 0.7) +
+    geom_smooth(method = "lm", color = "red", se = TRUE) +
+    labs(title = "Relación entre Masa y Altura",
+         x = "Altura (cm)",
+         y = "Masa (kg)") +
+    theme_minimal()
+}
+
+```
+**Generar el Grafico**
+```{r plot2, include=TRUE, message=FALSE, warning=FALSE}
+plot <- plot_mass_height_relationship(starwars_clean)
+print(plot)
+```
+
+**Calcular la correlación**
+
+```{r correlacion, include=TRUE, message=FALSE, warning=FALSE}
+# Calcular la correlación entre altura y masa
+correlation <- cor(starwars_clean$height, starwars_clean$mass, use = "complete.obs")
+print(paste("La correlación entre altura y masa es:", round(correlation, 2)))
+
+```
+
+**La correlación calculada entre la altura y la masa de los personajes incluidos en el dataset starwars_clean es de 0.13, lo que sugiere una relación lineal positiva, pero débil, entre estas dos variables. Este valor indica que, aunque existe una ligera tendencia a que las masas aumenten con las alturas, esta asociación no es consistente ni significativa en términos prácticos.**
+
+
+## **3. ¿Cuál es el porcentaje de colores de ojos por género?**
+
+**Calcular porcentajes y graficar**
+
+```{r}
+eye_color_percentage <- starwars_clean %>% 
+  group_by(gender, eye_color) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(gender) %>%
+  mutate(percentage = count / sum(count) * 100)
+
+ggplot(eye_color_percentage, aes(x = gender, y = percentage, fill = eye_color)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(aes(label = sprintf("%.1f%%", percentage)), 
+            position = position_stack(vjust = 0.5), size = 3) +
+  labs(title = "Distribución de Colores de Ojos por Género",
+       x = "Género", y = "Porcentaje") +
+  theme_minimal()
+```
+
+**El análisis de la distribución de colores de ojos según el género en los personajes del universo Star Wars revela patrones interesantes y distintivos. En particular, los colores "brown" (marrón) y "yellow" (amarillo) son más prevalentes en personajes masculinos. El color marrón representa un 21.3% de los personajes masculinos, mientras que en los femeninos alcanza un 22.2%, mostrando una ligera paridad entre géneros para este color.**
+
+**Por otro lado, los ojos azules destacan como el color predominante en personajes femeninos, representando el 44% de los casos en este grupo. Esto sugiere que, en términos proporcionales, las características físicas de los personajes femeninos están marcadas por una fuerte tendencia hacia este color, en comparación con una distribución más variada en los masculinos.**
+
+
+
+# **Conclusión**
+Este análisis proporciona una visión detallada sobre la altura, masa y distribución de características físicas de los personajes del universo Star Wars. Espero que sea útil para futuros análisis más complejos.
+
+
+Este código debería ejecutarse sin problemas en RStudio. Si encuentras algún error, házmelo saber y lo solucionamos juntos. 😊
+
+
+
+
+

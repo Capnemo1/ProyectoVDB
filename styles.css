@@ -1,0 +1,24 @@
+/* Tamaño global de fuente para todo el texto */
+section {
+    font-size: 14px; /* Ajusta este valor según tus necesidades */
+    text-align: justify; /* Para justificar el texto */
+}
+
+/* Tamaños específicos para encabezados */
+h1 {
+    font-size: 22px;
+}
+
+h2 {
+    font-size: 18px;
+}
+
+h3 {
+    font-size: 16px;
+}
+
+/* Personalización de párrafos */
+p {
+    margin-bottom: 1em; /* Espaciado entre párrafos */
+    line-height: 1.5;  /* Altura de línea para mejorar la legibilidad */
+}
